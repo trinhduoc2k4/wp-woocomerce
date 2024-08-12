@@ -142,7 +142,7 @@ function woocomerce_theme_scripts() {
 	wp_style_add_data( 'woocomerce_theme-style', 'rtl', 'replace' );
 
 	wp_enqueue_script( 'woocomerce_theme-navigation', get_template_directory_uri() . '/js/navigation.js', array(), _S_VERSION, true );
-	wp_enqueue_style('bootstrap.css', get_template_directory_uri() . '/css/styles.css', array(), '5.0.1', 'all');
+	wp_enqueue_style('bootstrap.css', get_template_directory_uri() . '/css/style.css', array(), '5.0.1', 'all');
 	wp_enqueue_style('bootstrap.icon', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css', array(), '1.11.2', 'all');
 	wp_enqueue_script( 'bootstrap.js', 'https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js', 'jquery', '5.0.2', true );
 	//font
@@ -193,4 +193,154 @@ function woocommerce_header_add_to_cart_fragment( $fragments ) {
 	<?php
 	$fragments['a.cart-customlocation'] = ob_get_clean();
 	return $fragments;
+}
+
+add_theme_support( 'woocommerce' );
+
+//hook: woocommerce_archive_description
+function woocommerce_taxonomy_archive_description() {
+	echo "this is shop page";
+}
+
+add_action( 'woocommerce_archive_description', 'woocommerce_taxonomy_archive_description', 10 );
+
+//hook: woocommerce_before_shop_loop
+function notices() {
+	?>
+		<strong>notification</strong>
+	<?php
+}
+
+add_action( 'woocommerce_before_shop_loop', 'notices', 10 );
+
+//hook: woocommerce_after_shop_loop_item_title
+function woocommerce_template_loop_price() {
+	?>
+		<p><?php the_excerpt(  ); ?></p>
+	<?php
+}
+
+add_action( 'woocommerce_after_shop_loop_item_title', 'woocommerce_template_loop_price', 10 );
+
+
+
+// hook: woocommere_after_shoop_loop_item
+function ui_show_variation_stock() {
+  //get current product
+  global $product;
+  
+  //check if it's a variable product
+  if ( $product->get_type() == 'variable' ) {
+      //loop through each variation
+    
+      foreach ( $product->get_available_variations() as $variation ) {
+      
+        //lets store the attributes so users will know it
+        $attributes = array();
+    
+        foreach ( $variation['attributes'] as $attribute ) {
+          //write each individual attribute (e.g. brown, plastic||green, metal)
+          $attributes[] = $attribute;
+        }
+		
+        
+		
+		
+    //combine all attributes in a string
+    // $attributes = implode( ', ', $attributes );
+	// var_dump($attributes[0]);
+    
+    //check if product is in stock
+        if ( $variation['max_qty'] > 0 || ! empty ( $variation['is_in_stock'] ) ) { 
+          //display stock count if any
+          echo '<br/>' . "Variations: " .  $attributes[0]; 
+        } else {
+      //just display out of stock
+          echo '<br/>' . "Variation: " .  $attributes[0]; 
+        }
+      }
+    }
+}
+
+add_action( 'woocommerce_after_shop_loop_item', 'ui_show_variation_stock' );
+
+
+// woocommerce single product hook
+remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_price', 10 );
+add_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_price', 1 );
+
+
+//custom product tab
+// function short_description_custom($tabs) {
+// 	// $tabs = the_content();
+// 	// return $tabs;
+// 	unset($tabs['description']);
+// 	unset($tabs['additional_information']);
+// 	unset($tabs['reviews']);
+
+// 	$tabs['description_product'] = array(
+// 		"title" => "Full Description",
+// 		"priority" => "5",
+// 		"callback" => "woocommerce_description"
+// 	);
+
+// 	return $tabs;
+// }
+
+// function woocommerce_description() {
+// 	?>
+// 		<div><?php the_content(); ?></div>
+// 	<?php
+// }
+
+function short_description_custom($tabs) {
+	?>
+		<div class="woocommerce-tabs wc-tabs-wrapper">
+			<?php 
+				$tabs = the_content();
+				return $tabs;
+			?>
+		</div>
+	<?php
+}
+
+
+add_filter('woocommerce_product_tabs', 'short_description_custom');
+
+//handle related product
+add_filter( 'woocommerce_output_related_products_args', 'jk_related_products_args', 20 );
+function jk_related_products_args( $args ) {
+	$args['posts_per_page'] = 3; // 4 related products
+	$args['columns'] = 3; // arranged in 2 columns
+	return $args;
+}
+
+
+
+// cart-page
+
+//free ship >= 20
+add_action("woocommerce_before_cart_table", "show_notice_free_ship");
+
+function show_notice_free_ship() {
+	$min_amount = 20;
+	$current_amount = WC()->cart->subtotal;
+	if($current_amount < $min_amount) {
+		?>
+			<div class="woocommerce-message">
+				You must buy <?php echo wc_price($min_amount - $current_amount) ?> for free ship
+			</div>
+		<?php
+	}
+}
+
+//coupon 
+add_action('woocommerce_cart_coupon', 'show_expire_date');
+
+function show_expire_date() {
+	?>
+		<div class="woocommerce-error">
+				You have 30 days to use your coupon
+		</div>
+	<?php
 }
